@@ -16,6 +16,7 @@ File Browser provides a file managing interface within a specified directory and
 - [Customization](customization.md)
 - [Authentication](authentication.md)
 - [Email sharing](email-sharing.md)
+- [GitHub Container Registry](ghcr.md)
 - [Command Execution](command-execution.md)
 - [Deployment](deployment.md)
 - [Troubleshooting](troubleshooting.md)
