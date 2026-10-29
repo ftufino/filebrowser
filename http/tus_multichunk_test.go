@@ -52,6 +52,7 @@ type tusTestFixture struct {
 	client *http.Client
 	token  string
 	scope  string
+	store  *storage.Storage
 }
 
 func newTusTestFixture(t *testing.T) *tusTestFixture {
@@ -76,6 +77,7 @@ func newTusTestFixture(t *testing.T) *tusTestFixture {
 		client: srv.Client(),
 		token:  signToken(t, perm, key),
 		scope:  userScope,
+		store:  st,
 	}
 }
 
@@ -216,6 +218,60 @@ func TestTusHeadReportsOffsetBetweenChunks(t *testing.T) {
 	}
 	if got, want := headRes.Header.Get("Upload-Length"), strconv.Itoa(fileSize); got != want {
 		t.Fatalf("HEAD Upload-Length = %q, want %q", got, want)
+	}
+}
+
+func TestTusUploadCannotBeAccessedByDifferentUser(t *testing.T) {
+	f := newTusTestFixture(t)
+	otherPerm := users.Permissions{Create: true}
+	if err := f.store.Users.Save(&users.User{
+		ID:       2,
+		Username: "other",
+		Password: "pw",
+		Perm:     otherPerm,
+	}); err != nil {
+		t.Fatalf("save second user: %v", err)
+	}
+	otherToken := signTokenWithID(t, 2, otherPerm, []byte("test-signing-key"))
+	uploadURL := f.create(t, "private.bin", 4)
+
+	headReq, err := http.NewRequest(http.MethodHead, uploadURL, http.NoBody)
+	if err != nil {
+		t.Fatal(err)
+	}
+	headReq.Header.Set("X-Auth", otherToken)
+	headRes, err := f.client.Do(headReq)
+	if err != nil {
+		t.Fatalf("HEAD as second user: %v", err)
+	}
+	headRes.Body.Close()
+	if headRes.StatusCode != http.StatusNotFound {
+		t.Fatalf("HEAD as second user: status %d, want 404", headRes.StatusCode)
+	}
+
+	patchReq, err := http.NewRequest(http.MethodPatch, uploadURL, bytes.NewReader([]byte("evil")))
+	if err != nil {
+		t.Fatal(err)
+	}
+	patchReq.Header.Set("X-Auth", otherToken)
+	patchReq.Header.Set("Content-Type", "application/offset+octet-stream")
+	patchReq.Header.Set("Upload-Offset", "0")
+	patchRes, err := f.client.Do(patchReq)
+	if err != nil {
+		t.Fatalf("PATCH as second user: %v", err)
+	}
+	patchBody, _ := io.ReadAll(patchRes.Body)
+	patchRes.Body.Close()
+	if patchRes.StatusCode != http.StatusNotFound {
+		t.Fatalf("PATCH as second user: status %d body %q, want 404", patchRes.StatusCode, patchBody)
+	}
+
+	content, err := os.ReadFile(filepath.Join(f.scope, "private.bin"))
+	if err != nil {
+		t.Fatalf("read upload file: %v", err)
+	}
+	if len(content) != 0 {
+		t.Fatalf("second user's PATCH changed the upload: got %q", content)
 	}
 }
 

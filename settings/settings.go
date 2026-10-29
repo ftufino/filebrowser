@@ -19,6 +19,15 @@ const DefaultDirMode = 0750
 // AuthMethod describes an authentication method.
 type AuthMethod string
 
+// SMTPSettings configures authenticated outgoing email using SMTP with STARTTLS.
+type SMTPSettings struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	From     string `json:"from"`
+}
+
 // Settings contain the main settings of the application.
 type Settings struct {
 	Key                   []byte              `json:"key"`
@@ -30,6 +39,7 @@ type Settings struct {
 	AuthMethod            AuthMethod          `json:"authMethod"`
 	LogoutPage            string              `json:"logoutPage"`
 	Branding              Branding            `json:"branding"`
+	SMTP                  SMTPSettings        `json:"smtp"`
 	Tus                   Tus                 `json:"tus"`
 	Commands              map[string][]string `json:"commands"`
 	Shell                 []string            `json:"shell"`

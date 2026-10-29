@@ -103,9 +103,13 @@ func TestResourceCopyDoesNotDereferenceEscapingSymlink(t *testing.T) {
 }
 
 func signToken(t *testing.T, perm users.Permissions, key []byte) string {
+	return signTokenWithID(t, 1, perm, key)
+}
+
+func signTokenWithID(t *testing.T, id uint, perm users.Permissions, key []byte) string {
 	t.Helper()
 	claims := &authToken{
-		User: userInfo{ID: 1, Username: "u", Perm: perm},
+		User: userInfo{ID: id, Username: "u", Perm: perm},
 		RegisteredClaims: jwt.RegisteredClaims{
 			IssuedAt:  jwt.NewNumericDate(time.Now().Add(-time.Minute)),
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),

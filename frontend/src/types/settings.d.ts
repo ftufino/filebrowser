@@ -8,6 +8,7 @@ interface ISettings {
   authMethod: string;
   rules: any[];
   branding: SettingsBranding;
+  smtp: SettingsSMTP;
   tus: SettingsTus;
   shell: string[];
   commands: SettingsCommand;
@@ -39,6 +40,15 @@ interface SettingsBranding {
 interface SettingsTus {
   chunkSize: number;
   retryCount: number;
+}
+
+interface SettingsSMTP {
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  from: string;
+  hasPassword: boolean;
 }
 
 interface SettingsCommand {

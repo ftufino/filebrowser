@@ -50,6 +50,10 @@ func (s *Storage) Get() (*Settings, error) {
 		}
 	}
 
+	if set.SMTP.Port == 0 {
+		set.SMTP.Port = 587
+	}
+
 	if set.FileMode == 0 {
 		set.FileMode = DefaultFileMode
 	}

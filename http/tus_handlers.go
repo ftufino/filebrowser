@@ -34,7 +34,7 @@ func drainRequestBody(r *http.Request) {
 }
 
 // keepUploadActive periodically touches the cache entry to prevent eviction during transfer
-func keepUploadActive(cache UploadCache, filePath string) func() {
+func keepUploadActive(cache UploadCache, userID uint, filePath string) func() {
 	stop := make(chan bool)
 
 	go func() {
@@ -46,7 +46,7 @@ func keepUploadActive(cache UploadCache, filePath string) func() {
 			case <-stop:
 				return
 			case <-ticker.C:
-				cache.Touch(filePath)
+				cache.Touch(userID, filePath)
 			}
 		}
 	}()
@@ -131,7 +131,7 @@ func tusPostHandler(cache UploadCache) handleFunc {
 		// The removal callback deletes an abandoned upload through the user's
 		// scoped filesystem, so eviction cannot follow a symlink out of scope.
 		uploadPath := r.URL.Path
-		cache.Register(file.RealPath(), uploadLength, func() error {
+		cache.Register(d.user.ID, file.RealPath(), uploadLength, func() error {
 			return d.user.Fs.Remove(uploadPath)
 		})
 
@@ -164,7 +164,7 @@ func tusHeadHandler(cache UploadCache) handleFunc {
 			return errToStatus(err), err
 		}
 
-		uploadLength, err := cache.GetLength(file.RealPath())
+		uploadLength, err := cache.GetLength(d.user.ID, file.RealPath())
 		if err != nil {
 			return http.StatusNotFound, err
 		}
@@ -218,7 +218,7 @@ func tusPatchUpload(w http.ResponseWriter, r *http.Request, d *data, cache Uploa
 		return errToStatus(err), err
 	}
 
-	uploadLength, err := cache.GetLength(file.RealPath())
+	uploadLength, err := cache.GetLength(d.user.ID, file.RealPath())
 	if err != nil {
 		return http.StatusNotFound, err
 	}
@@ -228,7 +228,7 @@ func tusPatchUpload(w http.ResponseWriter, r *http.Request, d *data, cache Uploa
 	}
 
 	// Prevent the upload from being evicted during the transfer
-	stop := keepUploadActive(cache, file.RealPath())
+	stop := keepUploadActive(cache, d.user.ID, file.RealPath())
 	defer stop()
 
 	switch {
@@ -286,7 +286,7 @@ func tusPatchUpload(w http.ResponseWriter, r *http.Request, d *data, cache Uploa
 	w.Header().Set("Upload-Offset", strconv.FormatInt(newOffset, 10))
 
 	if newOffset >= uploadLength {
-		cache.Complete(file.RealPath())
+		cache.Complete(d.user.ID, file.RealPath())
 		_ = d.RunHook(func() error { return nil }, "upload", r.URL.Path, "", d.user)
 	}
 
@@ -311,7 +311,7 @@ func tusDeleteHandler(cache UploadCache) handleFunc {
 			return errToStatus(err), err
 		}
 
-		_, err = cache.GetLength(file.RealPath())
+		_, err = cache.GetLength(d.user.ID, file.RealPath())
 		if err != nil {
 			return http.StatusNotFound, err
 		}
@@ -321,7 +321,7 @@ func tusDeleteHandler(cache UploadCache) handleFunc {
 			return errToStatus(err), err
 		}
 
-		cache.Complete(file.RealPath())
+		cache.Complete(d.user.ID, file.RealPath())
 
 		return http.StatusNoContent, nil
 	})

@@ -35,28 +35,28 @@ func newRedisUploadCache(redisURL string) (*redisUploadCache, error) {
 	return &redisUploadCache{client: client}, nil
 }
 
-func (c *redisUploadCache) filePathKey(filePath string) string {
-	return "filebrowser:upload:" + filePath
+func (c *redisUploadCache) filePathKey(userID uint, filePath string) string {
+	return "filebrowser:upload:" + uploadCacheKey(userID, filePath)
 }
 
 // Register stores the upload length. The scoped removal callback is unused by
 // the redis backend, which does not delete partial files on eviction.
-func (c *redisUploadCache) Register(filePath string, fileSize int64, _ func() error) {
-	err := c.client.Set(context.Background(), c.filePathKey(filePath), fileSize, uploadCacheTTL).Err()
+func (c *redisUploadCache) Register(userID uint, filePath string, fileSize int64, _ func() error) {
+	err := c.client.Set(context.Background(), c.filePathKey(userID, filePath), fileSize, uploadCacheTTL).Err()
 	if err != nil {
 		log.Printf("failed to register upload in redis cache: %v", err)
 	}
 }
 
-func (c *redisUploadCache) Complete(filePath string) {
-	err := c.client.Del(context.Background(), c.filePathKey(filePath)).Err()
+func (c *redisUploadCache) Complete(userID uint, filePath string) {
+	err := c.client.Del(context.Background(), c.filePathKey(userID, filePath)).Err()
 	if err != nil {
 		log.Printf("failed to complete upload in redis cache: %v", err)
 	}
 }
 
-func (c *redisUploadCache) GetLength(filePath string) (int64, error) {
-	result, err := c.client.Get(context.Background(), c.filePathKey(filePath)).Result()
+func (c *redisUploadCache) GetLength(userID uint, filePath string) (int64, error) {
+	result, err := c.client.Get(context.Background(), c.filePathKey(userID, filePath)).Result()
 	if err != nil {
 		if errors.Is(err, redis.Nil) {
 			return 0, fmt.Errorf("no active upload found for the given path")
@@ -69,13 +69,13 @@ func (c *redisUploadCache) GetLength(filePath string) (int64, error) {
 		return 0, fmt.Errorf("invalid upload length in cache: %w", err)
 	}
 
-	c.Touch(filePath)
+	c.Touch(userID, filePath)
 
 	return size, nil
 }
 
-func (c *redisUploadCache) Touch(filePath string) {
-	err := c.client.Expire(context.Background(), c.filePathKey(filePath), uploadCacheTTL).Err()
+func (c *redisUploadCache) Touch(userID uint, filePath string) {
+	err := c.client.Expire(context.Background(), c.filePathKey(userID, filePath), uploadCacheTTL).Err()
 	if err != nil {
 		log.Printf("failed to touch upload in redis cache: %v", err)
 	}

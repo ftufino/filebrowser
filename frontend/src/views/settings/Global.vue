@@ -124,6 +124,68 @@
             />
           </p>
 
+          <h3>{{ t("settings.smtp") }}</h3>
+          <p class="small">{{ t("settings.smtpHelp") }}</p>
+
+          <p>
+            <label for="smtp-host">{{ t("settings.smtpHost") }}</label>
+            <input
+              class="input input--block"
+              type="text"
+              v-model.trim="settings.smtp.host"
+              id="smtp-host"
+              autocomplete="off"
+            />
+          </p>
+
+          <p>
+            <label for="smtp-port">{{ t("settings.smtpPort") }}</label>
+            <input
+              class="input input--block"
+              type="number"
+              min="1"
+              max="65535"
+              v-model.number="settings.smtp.port"
+              id="smtp-port"
+            />
+          </p>
+
+          <p>
+            <label for="smtp-username">{{ t("settings.smtpUsername") }}</label>
+            <input
+              class="input input--block"
+              type="text"
+              v-model.trim="settings.smtp.username"
+              id="smtp-username"
+              autocomplete="username"
+            />
+          </p>
+
+          <p>
+            <label for="smtp-password">{{ t("settings.smtpPassword") }}</label>
+            <input
+              class="input input--block"
+              type="password"
+              v-model="settings.smtp.password"
+              :placeholder="
+                settings.smtp.hasPassword ? t('settings.smtpPasswordSaved') : ''
+              "
+              id="smtp-password"
+              autocomplete="new-password"
+            />
+          </p>
+
+          <p>
+            <label for="smtp-from">{{ t("settings.smtpFrom") }}</label>
+            <input
+              class="input input--block"
+              type="email"
+              v-model.trim="settings.smtp.from"
+              id="smtp-from"
+              autocomplete="email"
+            />
+          </p>
+
           <h3>{{ t("settings.tusUploads") }}</h3>
 
           <p class="small">{{ t("settings.tusUploadsHelp") }}</p>

@@ -114,6 +114,21 @@
           v-model.trim="password"
           tabindex="3"
         />
+
+        <div v-if="selectedFile && !selectedFile.isDir">
+          <h3>{{ $t("prompts.emailAttachment") }}</h3>
+          <p class="small">{{ $t("prompts.emailAttachmentHelp") }}</p>
+          <p>
+            <label for="email-recipient">{{ $t("prompts.emailRecipient") }}</label>
+            <input
+              id="email-recipient"
+              class="input input--block"
+              type="email"
+              v-model.trim="emailTo"
+              autocomplete="email"
+            />
+          </p>
+        </div>
       </div>
 
       <div class="card-action">
@@ -125,6 +140,18 @@
           tabindex="5"
         >
           {{ $t("buttons.cancel") }}
+        </button>
+        <button
+          v-if="selectedFile && !selectedFile.isDir"
+          class="button button--flat button--grey"
+          :disabled="!canSendEmail"
+          @click="sendEmail"
+        >
+          {{
+            sendingEmail
+              ? $t("prompts.sendingEmail")
+              : $t("buttons.sendEmail")
+          }}
         </button>
         <button
           id="focus-prompt"
@@ -159,6 +186,8 @@ export default {
       clip: null,
       password: "",
       listing: true,
+      emailTo: "",
+      sendingEmail: false,
     };
   },
   inject: ["$showError", "$showSuccess"],
@@ -180,6 +209,19 @@ export default {
       }
 
       return this.req.items[this.selected[0]].url;
+    },
+    selectedFile() {
+      if (this.selectedCount !== 1 || !this.req?.items) return null;
+      return this.req.items[this.selected[0]];
+    },
+    canSendEmail() {
+      return (
+        !!this.emailTo &&
+        !!this.selectedFile &&
+        !this.selectedFile.isDir &&
+        this.selectedFile.size <= 25 * 1024 * 1024 &&
+        !this.sendingEmail
+      );
     },
   },
   async beforeMount() {
@@ -243,6 +285,19 @@ export default {
         this.listing = true;
       } catch (e) {
         this.$showError(e);
+      }
+    },
+    sendEmail: async function () {
+      if (!this.canSendEmail || !this.url) return;
+      this.sendingEmail = true;
+      try {
+        await api.email.send(this.url, this.emailTo);
+        this.$showSuccess(this.$t("success.emailSent"));
+        this.closeHovers();
+      } catch (e) {
+        this.$showError(e);
+      } finally {
+        this.sendingEmail = false;
       }
     },
     deleteLink: async function (event, link) {

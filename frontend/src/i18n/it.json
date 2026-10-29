@@ -35,6 +35,7 @@
     "select": "Seleziona",
     "selectMultiple": "Seleziona molteplici",
     "share": "Condividi",
+    "sendEmail": "Invia email",
     "shell": "Mostra/nascondi shell",
     "submit": "Invia",
     "switchView": "Cambia vista",
@@ -177,7 +178,11 @@
     "skip": "Skip",
     "forbiddenError": "Forbidden Error",
     "currentPassword": "Your password",
-    "currentPasswordMessage": "Enter your password to validate this action."
+    "currentPasswordMessage": "Enter your password to validate this action.",
+    "emailAttachment": "Invia come allegato email",
+    "emailAttachmentHelp": "Il file selezionato sarà allegato direttamente all'email (massimo 25 MiB).",
+    "emailRecipient": "Indirizzo email del destinatario",
+    "sendingEmail": "Invio in corso..."
   },
   "search": {
     "images": "Immagini",
@@ -258,6 +263,14 @@
     "scope": "Scope",
     "setDateFormat": "Fissa il formato di data esatto",
     "settingsUpdated": "Impostazioni aggiornate!",
+    "smtp": "Email in uscita (SMTP)",
+    "smtpHelp": "Configura un server SMTP con STARTTLS. Lascia vuoto l'host per disattivare la condivisione via email. È possibile allegare file fino a 25 MiB. Lascia vuota la password per mantenere quella salvata.",
+    "smtpHost": "Host SMTP",
+    "smtpPort": "Porta SMTP",
+    "smtpUsername": "Nome utente SMTP (opzionale)",
+    "smtpPassword": "Password SMTP (opzionale)",
+    "smtpPasswordSaved": "Password salvata; lascia vuoto per mantenerla",
+    "smtpFrom": "Indirizzo email del mittente",
     "shareDuration": "Durata della condivisione",
     "shareManagement": "Gestione delle condivisioni",
     "shareDeleted": "Percorso condiviso eliminato!",
@@ -294,7 +307,8 @@
     "siteSettings": "Impostazioni del sito"
   },
   "success": {
-    "linkCopied": "Link copiato!"
+    "linkCopied": "Link copiato!",
+    "emailSent": "Email inviata!"
   },
   "time": {
     "days": "Giorni",

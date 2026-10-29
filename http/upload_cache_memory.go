@@ -3,6 +3,7 @@ package fbhttp
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/jellydator/ttlcache/v3"
@@ -18,19 +19,23 @@ type UploadCache interface {
 	// the upload expires before completion, to delete the partial file; it must
 	// route through the uploading user's scoped filesystem so that eviction
 	// cannot follow a symlink out of the user's scope.
-	Register(filePath string, fileSize int64, remove func() error)
+	Register(userID uint, filePath string, fileSize int64, remove func() error)
 
 	// Complete removes an upload from the cache
-	Complete(filePath string)
+	Complete(userID uint, filePath string)
 
 	// GetLength returns the expected file size for an active upload
-	GetLength(filePath string) (int64, error)
+	GetLength(userID uint, filePath string) (int64, error)
 
 	// Touch refreshes the TTL for an active upload
-	Touch(filePath string)
+	Touch(userID uint, filePath string)
 
 	// Close cleans up any resources
 	Close()
+}
+
+func uploadCacheKey(userID uint, filePath string) string {
+	return strconv.FormatUint(uint64(userID), 10) + ":" + filePath
 }
 
 // memoryUploadEntry is the value stored for each active upload.
@@ -65,24 +70,24 @@ func newMemoryUploadCache() *memoryUploadCache {
 	return &memoryUploadCache{cache: cache}
 }
 
-func (c *memoryUploadCache) Register(filePath string, fileSize int64, remove func() error) {
-	c.cache.Set(filePath, memoryUploadEntry{size: fileSize, remove: remove}, uploadCacheTTL)
+func (c *memoryUploadCache) Register(userID uint, filePath string, fileSize int64, remove func() error) {
+	c.cache.Set(uploadCacheKey(userID, filePath), memoryUploadEntry{size: fileSize, remove: remove}, uploadCacheTTL)
 }
 
-func (c *memoryUploadCache) Complete(filePath string) {
-	c.cache.Delete(filePath)
+func (c *memoryUploadCache) Complete(userID uint, filePath string) {
+	c.cache.Delete(uploadCacheKey(userID, filePath))
 }
 
-func (c *memoryUploadCache) GetLength(filePath string) (int64, error) {
-	item := c.cache.Get(filePath)
+func (c *memoryUploadCache) GetLength(userID uint, filePath string) (int64, error) {
+	item := c.cache.Get(uploadCacheKey(userID, filePath))
 	if item == nil {
 		return 0, fmt.Errorf("no active upload found for the given path")
 	}
 	return item.Value().size, nil
 }
 
-func (c *memoryUploadCache) Touch(filePath string) {
-	c.cache.Touch(filePath)
+func (c *memoryUploadCache) Touch(userID uint, filePath string) {
+	c.cache.Touch(uploadCacheKey(userID, filePath))
 }
 
 func (c *memoryUploadCache) Close() {

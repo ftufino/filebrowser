@@ -37,6 +37,7 @@
     "select": "Select",
     "selectMultiple": "Select multiple",
     "share": "Share",
+    "sendEmail": "Send email",
     "shell": "Toggle shell",
     "submit": "Submit",
     "switchView": "Switch view",
@@ -179,7 +180,11 @@
     "skip": "Skip",
     "forbiddenError": "Forbidden Error",
     "currentPassword": "Your password",
-    "currentPasswordMessage": "Enter your password to validate this action."
+    "currentPasswordMessage": "Enter your password to validate this action.",
+    "emailAttachment": "Send as an email attachment",
+    "emailAttachmentHelp": "The selected file will be attached directly to the email (maximum 25 MiB).",
+    "emailRecipient": "Recipient email address",
+    "sendingEmail": "Sending..."
   },
   "search": {
     "images": "Images",
@@ -260,6 +265,14 @@
     "scope": "Scope",
     "setDateFormat": "Set exact date format",
     "settingsUpdated": "Settings updated!",
+    "smtp": "Outgoing email (SMTP)",
+    "smtpHelp": "Configure an SMTP server using STARTTLS. Leave the host empty to disable email sharing. Files up to 25 MiB can be attached. Leave the password empty to keep the saved password.",
+    "smtpHost": "SMTP host",
+    "smtpPort": "SMTP port",
+    "smtpUsername": "SMTP username (optional)",
+    "smtpPassword": "SMTP password (optional)",
+    "smtpPasswordSaved": "A password is saved; leave blank to keep it",
+    "smtpFrom": "Sender email address",
     "shareDuration": "Share Duration",
     "shareManagement": "Share Management",
     "shareDeleted": "Share deleted!",
@@ -300,7 +313,8 @@
     "siteSettings": "Site Settings"
   },
   "success": {
-    "linkCopied": "Link copied!"
+    "linkCopied": "Link copied!",
+    "emailSent": "Email sent!"
   },
   "time": {
     "days": "Days",
