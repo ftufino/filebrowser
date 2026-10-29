@@ -1,6 +1,6 @@
 # GitHub Container Registry
 
-The release workflow publishes multi-architecture images to `ghcr.io/ftufino/filebrowser` when a `v*` release tag is pushed. It publishes the version tag, the major-version tag, and `latest` for the standard image; the s6 image is available with the `-s6` suffix and as `s6`.
+The release workflow publishes multi-architecture images to `ghcr.io/ftufino/filebrowser` when a `v*` release tag is pushed. To run it manually, open **Actions → Continuous Integration → Run workflow** and enter the release tag (for example, `v2.64.0`). The workflow checks out and validates that tag before publishing. It publishes the version tag, the major-version tag, and `latest` for the standard image; the s6 image is available with the `-s6` suffix and as `s6`.
 
 Examples:
 
