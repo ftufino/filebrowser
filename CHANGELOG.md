@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## [2.64.9](https://github.com/ftufino/filebrowser/compare/v2.63.23...v2.64.9) (2026-11-24)
+## [2.64.10](https://github.com/ftufino/filebrowser/compare/v2.64.0...v2.64.10) (2026-11-24)
 
 ### Features
 
