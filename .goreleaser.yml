@@ -62,8 +62,6 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-amd64"
-      - "filebrowser/filebrowser:v{{ .Major }}-amd64"
       - "ghcr.io/ftufino/filebrowser:{{ .Tag }}-amd64"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-amd64"
     extra_files:
@@ -81,8 +79,6 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-arm64"
-      - "filebrowser/filebrowser:v{{ .Major }}-arm64"
       - "ghcr.io/ftufino/filebrowser:{{ .Tag }}-arm64"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-arm64"
     extra_files:
@@ -101,8 +97,6 @@ dockers:
     goarch: arm
     goarm: "6"
     image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-armv6"
-      - "filebrowser/filebrowser:v{{ .Major }}-armv6"
       - "ghcr.io/ftufino/filebrowser:{{ .Tag }}-armv6"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-armv6"
     extra_files:
@@ -121,8 +115,6 @@ dockers:
     goarch: arm
     goarm: "7"
     image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-armv7"
-      - "filebrowser/filebrowser:v{{ .Major }}-armv7"
       - "ghcr.io/ftufino/filebrowser:{{ .Tag }}-armv7"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-armv7"
     extra_files:
@@ -142,8 +134,6 @@ dockers:
     goos: linux
     goarch: amd64
     image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-amd64-s6"
-      - "filebrowser/filebrowser:v{{ .Major }}-amd64-s6"
       - "ghcr.io/ftufino/filebrowser:{{ .Tag }}-amd64-s6"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-amd64-s6"
     extra_files:
@@ -161,8 +151,6 @@ dockers:
     goos: linux
     goarch: arm64
     image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-arm64-s6"
-      - "filebrowser/filebrowser:v{{ .Major }}-arm64-s6"
       - "ghcr.io/ftufino/filebrowser:{{ .Tag }}-arm64-s6"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-arm64-s6"
     extra_files:
@@ -196,37 +184,10 @@ docker_manifests:
     image_templates:
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-amd64-s6"
       - "ghcr.io/ftufino/filebrowser:v{{ .Major }}-arm64-s6"
-  - name_template: "filebrowser/filebrowser:latest"
-    image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-amd64"
-      - "filebrowser/filebrowser:{{ .Tag }}-arm64"
-      - "filebrowser/filebrowser:{{ .Tag }}-armv7"
-  - name_template: "filebrowser/filebrowser:{{ .Tag }}"
-    image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-amd64"
-      - "filebrowser/filebrowser:{{ .Tag }}-arm64"
-      - "filebrowser/filebrowser:{{ .Tag }}-armv7"
-  - name_template: "filebrowser/filebrowser:v{{ .Major }}"
-    image_templates:
-      - "filebrowser/filebrowser:v{{ .Major }}-amd64"
-      - "filebrowser/filebrowser:v{{ .Major }}-arm64"
-      - "filebrowser/filebrowser:v{{ .Major }}-armv7"
-  ## s6 image manifests
-  - name_template: "filebrowser/filebrowser:s6"
-    image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-amd64-s6"
-      - "filebrowser/filebrowser:{{ .Tag }}-arm64-s6"
-  - name_template: "filebrowser/filebrowser:{{ .Tag }}-s6"
-    image_templates:
-      - "filebrowser/filebrowser:{{ .Tag }}-amd64-s6"
-      - "filebrowser/filebrowser:{{ .Tag }}-arm64-s6"
-  - name_template: "filebrowser/filebrowser:v{{ .Major }}-s6"
-    image_templates:
-      - "filebrowser/filebrowser:v{{ .Major }}-amd64-s6"
-      - "filebrowser/filebrowser:v{{ .Major }}-arm64-s6"
 
 homebrew_casks:
   - name: filebrowser
+    skip_upload: true
     repository:
       owner: filebrowser
       name: homebrew-tap
