@@ -54,6 +54,10 @@ func (s *Storage) Get() (*Settings, error) {
 		set.SMTP.Port = 587
 	}
 
+	if set.SMTP.MaxAttachmentMB == 0 {
+		set.SMTP.MaxAttachmentMB = DefaultMaxAttachmentMB
+	}
+
 	if set.FileMode == 0 {
 		set.FileMode = DefaultFileMode
 	}

@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
+## [2.64.0](https://github.com/ftufino/filebrowser/compare/v2.63.23...v2.64.0) (2026-11-24)
+
+### Features
+
+* shares: limit the number of downloads (`maxDownloads`) and show the download counter in the share list
+* shares: optionally delete the shared files physically when the share expires or the download limit is reached (`deleteFiles`); requires the delete permission and an expiration or a download limit
+* shares: expired shares are now purged in background every minute
+* email: send a shared file as attachment from the Share prompt (also available from the share list when SMTP is configured)
+* home assistant: add-on (`ha-addon`, `repository.yaml`) with configurable `base_url` for use behind a reverse proxy (internal port fixed to 8080)
+* email: configurable maximum attachment size (`SMTP.MaxAttachmentMB`, default 25 MiB) in the global settings
+* publish container images to GitHub Container Registry (`ghcr.io/ftufino/filebrowser`)
+* ci: manual trigger of the release workflow with a tag input
+
+### Bug Fixes
+
+* shares: removing expired links while listing no longer skips entries
+* ci: release only to GHCR, skipping Docker Hub and the upstream Homebrew tap; grant `contents: write` to the release job
+* home assistant: custom healthcheck so the add-on leaves the `startup` state
+
+* email: support implicit TLS on port 465 and clearer SMTP connection errors (fixes `initialize SMTP client: EOF`)
+* home assistant: use `--baseURL` instead of the deprecated `--baseurl` flag
+
+### Documentation
+
+* remove the "archived on 2026-09-01" notices from docs, contributing guide and PR template
+
 ## [2.63.23](https://github.com/filebrowser/filebrowser/compare/v2.63.22...v2.63.23) (2026-07-27)
 ## [2.63.22](https://github.com/filebrowser/filebrowser/compare/v2.63.21...v2.63.22) (2026-07-27)
 

@@ -26,6 +26,20 @@ type SMTPSettings struct {
 	Username string `json:"username"`
 	Password string `json:"password"`
 	From     string `json:"from"`
+	// MaxAttachmentMB is the maximum size of an emailed file in MiB.
+	MaxAttachmentMB int `json:"maxAttachmentMB"`
+}
+
+// DefaultMaxAttachmentMB is the default limit for emailed files.
+const DefaultMaxAttachmentMB = 25
+
+// MaxAttachmentBytes returns the attachment size limit in bytes.
+func (s SMTPSettings) MaxAttachmentBytes() int64 {
+	mb := s.MaxAttachmentMB
+	if mb <= 0 {
+		mb = DefaultMaxAttachmentMB
+	}
+	return int64(mb) << 20
 }
 
 // Settings contain the main settings of the application.

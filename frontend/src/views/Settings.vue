@@ -34,15 +34,6 @@
       </div>
     </div>
 
-    <div class="card" v-if="user?.perm.admin">
-      <div class="card-title">
-        <h2>{{ t("settings.projectUpdatedTitle") }}</h2>
-      </div>
-      <div class="card-content">
-        <p>{{ t("settings.projectUpdatedDate") }}</p>
-      </div>
-    </div>
-
     <div v-if="loading">
       <h2 class="message delayed">
         <div class="spinner">

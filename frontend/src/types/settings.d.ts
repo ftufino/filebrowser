@@ -48,6 +48,7 @@ interface SettingsSMTP {
   username: string;
   password: string;
   from: string;
+  maxAttachmentMB: number;
   hasPassword: boolean;
 }
 

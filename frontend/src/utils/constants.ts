@@ -17,6 +17,8 @@ const enableThumbs: boolean = window.FileBrowser.EnableThumbs;
 const resizePreview: boolean = window.FileBrowser.ResizePreview;
 const enableExec: boolean = window.FileBrowser.EnableExec;
 const tusSettings = window.FileBrowser.TusSettings;
+const emailMaxAttachmentMB: number =
+  window.FileBrowser.EmailMaxAttachmentMB || 25;
 const origin = window.location.origin;
 const tusEndpoint = `/api/tus`;
 const hideLoginButton = window.FileBrowser.HideLoginButton;
@@ -40,6 +42,7 @@ export {
   resizePreview,
   enableExec,
   tusSettings,
+  emailMaxAttachmentMB,
   origin,
   tusEndpoint,
   hideLoginButton,

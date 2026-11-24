@@ -71,7 +71,7 @@
         </table>
         <div v-if="selectedFile && !selectedFile.isDir">
           <h3>{{ $t("prompts.emailAttachment") }}</h3>
-          <p class="small">{{ $t("prompts.emailAttachmentHelp") }}</p>
+          <p class="small">{{ $t("prompts.emailAttachmentHelp", { max: maxAttachmentMB }) }}</p>
           <p>
             <label for="email-recipient">{{ $t("prompts.emailRecipient") }}</label>
             <input
@@ -175,7 +175,7 @@
 
         <div v-if="selectedFile && !selectedFile.isDir">
           <h3>{{ $t("prompts.emailAttachment") }}</h3>
-          <p class="small">{{ $t("prompts.emailAttachmentHelp") }}</p>
+          <p class="small">{{ $t("prompts.emailAttachmentHelp", { max: maxAttachmentMB }) }}</p>
           <p>
             <label for="email-recipient">{{ $t("prompts.emailRecipient") }}</label>
             <input
@@ -235,6 +235,7 @@ import dayjs from "dayjs";
 import { useLayoutStore } from "@/stores/layout";
 import { useAuthStore } from "@/stores/auth";
 import { copy } from "@/utils/clipboard";
+import { emailMaxAttachmentMB } from "@/utils/constants";
 
 export default {
   name: "share",
@@ -277,12 +278,15 @@ export default {
       if (this.selectedCount !== 1 || !this.req?.items) return null;
       return this.req.items[this.selected[0]];
     },
+    maxAttachmentMB() {
+      return emailMaxAttachmentMB;
+    },
     canSendEmail() {
       return (
         !!this.emailTo &&
         !!this.selectedFile &&
         !this.selectedFile.isDir &&
-        this.selectedFile.size <= 25 * 1024 * 1024 &&
+        this.selectedFile.size <= this.maxAttachmentMB * 1024 * 1024 &&
         !this.sendingEmail
       );
     },

@@ -18,8 +18,6 @@ This project is being wound down. To avoid duplicates, first check the [existing
 
 ## Reporting a Vulnerability
 
-Until 2026-09-01, report privately via the [Security](https://github.com/filebrowser/filebrowser/security) page. After that date this repository is read-only and reports can no longer be submitted.
-
 Please include, where possible:
 
 - The commit the issue was found at

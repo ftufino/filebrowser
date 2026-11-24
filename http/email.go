@@ -23,8 +23,7 @@ import (
 )
 
 const (
-	maxEmailAttachmentSize = 25 << 20
-	maxEmailRequestSize    = 4 << 10
+	maxEmailRequestSize = 4 << 10
 )
 
 type emailRequest struct {
@@ -61,6 +60,7 @@ var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request
 		return http.StatusBadRequest, fmt.Errorf("invalid recipient address: %w", err)
 	}
 
+	maxSize := d.settings.SMTP.MaxAttachmentBytes()
 	info, err := d.user.Fs.Stat(r.URL.Path)
 	if err != nil {
 		return errToStatus(err), err
@@ -68,8 +68,8 @@ var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request
 	if !info.Mode().IsRegular() {
 		return http.StatusBadRequest, fmt.Errorf("only regular files can be emailed")
 	}
-	if info.Size() > maxEmailAttachmentSize {
-		return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the 25 MiB limit")
+	if info.Size() > maxSize {
+		return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
 	}
 
 	file, err := d.user.Fs.Open(r.URL.Path)
@@ -78,12 +78,12 @@ var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request
 	}
 	defer file.Close()
 
-	content, err := io.ReadAll(io.LimitReader(file, maxEmailAttachmentSize+1))
+	content, err := io.ReadAll(io.LimitReader(file, maxSize+1))
 	if err != nil {
 		return http.StatusInternalServerError, err
 	}
-	if len(content) > maxEmailAttachmentSize {
-		return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the 25 MiB limit")
+	if int64(len(content)) > maxSize {
+		return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
 	}
 
 	if err := sendEmailAttachment(d.settings.SMTP, recipient, filepath.Base(r.URL.Path), content); err != nil {
@@ -111,9 +111,23 @@ func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, 
 	}
 
 	address := net.JoinHostPort(config.Host, strconv.Itoa(config.Port))
-	conn, err := net.DialTimeout("tcp", address, 10*time.Second)
-	if err != nil {
-		return fmt.Errorf("connect to SMTP server: %w", err)
+	tlsConfig := &tls.Config{
+		ServerName: config.Host,
+		MinVersion: tls.VersionTLS12,
+	}
+	// Port 465 uses implicit TLS; every other port uses STARTTLS.
+	implicitTLS := config.Port == 465
+
+	var conn net.Conn
+	var dialErr error
+	dialer := &net.Dialer{Timeout: 10 * time.Second}
+	if implicitTLS {
+		conn, dialErr = tls.DialWithDialer(dialer, "tcp", address, tlsConfig)
+	} else {
+		conn, dialErr = dialer.Dial("tcp", address)
+	}
+	if dialErr != nil {
+		return fmt.Errorf("connect to SMTP server %s: %w", address, dialErr)
 	}
 	if err := conn.SetDeadline(time.Now().Add(2 * time.Minute)); err != nil {
 		_ = conn.Close()
@@ -123,14 +137,15 @@ func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, 
 	client, err := smtp.NewClient(conn, config.Host)
 	if err != nil {
 		_ = conn.Close()
-		return fmt.Errorf("initialize SMTP client: %w", err)
+		return fmt.Errorf("initialize SMTP client (server %s closed the connection or did not send a valid greeting; check host, port and that this server's IP is allowed): %w", address, err)
 	}
 	defer client.Close()
 
-	if ok, _ := client.Extension("STARTTLS"); !ok {
+	if implicitTLS {
+		// already encrypted
+	} else if ok, _ := client.Extension("STARTTLS"); !ok {
 		return fmt.Errorf("SMTP server does not support required STARTTLS")
-	}
-	if err := client.StartTLS(&tls.Config{
+	} else if err := client.StartTLS(&tls.Config{
 		ServerName: config.Host,
 		MinVersion: tls.VersionTLS12,
 	}); err != nil {

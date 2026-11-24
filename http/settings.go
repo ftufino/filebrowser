@@ -28,21 +28,23 @@ type settingsData struct {
 }
 
 type smtpSettingsData struct {
-	Host        string `json:"host"`
-	Port        int    `json:"port"`
-	Username    string `json:"username"`
-	Password    string `json:"password"`
-	From        string `json:"from"`
-	HasPassword bool   `json:"hasPassword"`
+	Host            string `json:"host"`
+	Port            int    `json:"port"`
+	Username        string `json:"username"`
+	Password        string `json:"password"`
+	From            string `json:"from"`
+	MaxAttachmentMB int    `json:"maxAttachmentMB"`
+	HasPassword     bool   `json:"hasPassword"`
 }
 
 func smtpSettingsResponse(s settings.SMTPSettings) *smtpSettingsData {
 	return &smtpSettingsData{
-		Host:        s.Host,
-		Port:        s.Port,
-		Username:    s.Username,
-		From:        s.From,
-		HasPassword: s.Password != "",
+		Host:            s.Host,
+		Port:            s.Port,
+		Username:        s.Username,
+		From:            s.From,
+		MaxAttachmentMB: int(s.MaxAttachmentBytes() >> 20),
+		HasPassword:     s.Password != "",
 	}
 }
 
@@ -62,12 +64,17 @@ func updateSMTPSettings(current settings.SMTPSettings, req *smtpSettingsData) (s
 	if port == 0 {
 		port = 587
 	}
+	maxMB := req.MaxAttachmentMB
+	if maxMB == 0 {
+		maxMB = settings.DefaultMaxAttachmentMB
+	}
 	next := settings.SMTPSettings{
-		Host:     strings.TrimSpace(req.Host),
-		Port:     port,
-		Username: strings.TrimSpace(req.Username),
-		Password: password,
-		From:     strings.TrimSpace(req.From),
+		MaxAttachmentMB: maxMB,
+		Host:            strings.TrimSpace(req.Host),
+		Port:            port,
+		Username:        strings.TrimSpace(req.Username),
+		Password:        password,
+		From:            strings.TrimSpace(req.From),
 	}
 
 	if strings.ContainsAny(next.Host, "\r\n\t /") {
@@ -75,6 +82,9 @@ func updateSMTPSettings(current settings.SMTPSettings, req *smtpSettingsData) (s
 	}
 	if next.Port < 1 || next.Port > 65535 {
 		return current, fmt.Errorf("invalid SMTP port")
+	}
+	if next.MaxAttachmentMB < 1 || next.MaxAttachmentMB > 1024 {
+		return current, fmt.Errorf("invalid SMTP attachment size limit")
 	}
 	if (next.Username == "") != (next.Password == "") {
 		return current, fmt.Errorf("SMTP username and password must both be set or both be empty")

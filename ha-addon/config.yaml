@@ -1,5 +1,5 @@
 name: File Browser
-version: "2.64.6"
+version: "2.64.7"
 slug: filebrowser
 description: File Browser with expiring shares and automatic file deletion
 url: https://github.com/ftufino/filebrowser
@@ -9,12 +9,13 @@ arch:
 startup: services
 boot: auto
 init: false
-host_network: true
+ports:
+  8080/tcp: 8080
+ports_description:
+  8080/tcp: Web interface
 options:
-  port: 8080
   base_url: ""
 schema:
-  port: port
   base_url: str?
 map:
   - share:rw

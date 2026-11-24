@@ -186,6 +186,20 @@
             />
           </p>
 
+          <p>
+            <label for="smtp-max-attachment">{{
+              t("settings.smtpMaxAttachment")
+            }}</label>
+            <input
+              class="input input--block"
+              type="number"
+              min="1"
+              max="1024"
+              v-model.number="settings.smtp.maxAttachmentMB"
+              id="smtp-max-attachment"
+            />
+          </p>
+
           <h3>{{ t("settings.tusUploads") }}</h3>
 
           <p class="small">{{ t("settings.tusUploadsHelp") }}</p>

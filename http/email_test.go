@@ -75,7 +75,7 @@ func TestEmailHandlerRejectsDirectoriesAndOversizedFiles(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := large.Truncate(maxEmailAttachmentSize + 1); err != nil {
+	if err := large.Truncate(settings.DefaultMaxAttachmentMB<<20 + 1); err != nil {
 		t.Fatal(err)
 	}
 	if err := large.Close(); err != nil {
