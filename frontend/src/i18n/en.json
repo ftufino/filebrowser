@@ -37,6 +37,7 @@
     "select": "Select",
     "selectMultiple": "Select multiple",
     "share": "Share",
+    "sendLinkByEmail": "Send link by email",
     "sendEmail": "Send email",
     "shell": "Toggle shell",
     "submit": "Submit",
@@ -187,6 +188,8 @@
     "emailAttachment": "Send as an email attachment",
     "emailAttachmentHelp": "The selected file will be attached directly to the email (maximum {max} MiB).",
     "emailSendHelp": "The selected items will be sent as an attachment (folders and multiple selections are compressed into a zip file, maximum {max} MiB).",
+    "emailLink": "Send link by email",
+    "emailLinkHelp": "The share link will be sent to the recipient by email.",
     "emailRecipient": "Recipient email address",
     "sendingEmail": "Sending..."
   },

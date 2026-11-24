@@ -36,3 +36,13 @@ export async function send(url: string, to: string, files?: string[]) {
     body: JSON.stringify({ to, files }),
   });
 }
+
+export async function sendLink(hash: string, to: string, url: string) {
+  return fetchURL("/api/email-link", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ to, hash, url }),
+  });
+}

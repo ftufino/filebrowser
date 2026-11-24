@@ -16,6 +16,7 @@ import (
 	"net/mail"
 	"net/smtp"
 	"net/textproto"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -121,6 +122,71 @@ var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request
 	return http.StatusNoContent, nil
 })
 
+type emailLinkRequest struct {
+	To   string `json:"to"`
+	Hash string `json:"hash"`
+	URL  string `json:"url"`
+}
+
+var emailLinkPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request, d *data) (int, error) {
+	smtpConfig, ok := effectiveSMTP(d.settings.SMTP, d.user.SMTP)
+	if !ok {
+		return http.StatusServiceUnavailable, fmt.Errorf("email sharing is not configured")
+	}
+
+	if r.Body == nil {
+		return http.StatusBadRequest, fmt.Errorf("missing email request body")
+	}
+	var req emailLinkRequest
+	if err := json.NewDecoder(http.MaxBytesReader(nil, r.Body, maxEmailRequestSize)).Decode(&req); err != nil {
+		return http.StatusBadRequest, fmt.Errorf("invalid email request: %w", err)
+	}
+
+	recipient, err := mail.ParseAddress(strings.TrimSpace(req.To))
+	if err != nil {
+		return http.StatusBadRequest, fmt.Errorf("invalid recipient address: %w", err)
+	}
+
+	link, err := d.store.Share.GetByHash(req.Hash)
+	if err != nil {
+		return errToStatus(err), err
+	}
+	if link.UserID != d.user.ID && !d.user.Perm.Admin {
+		return http.StatusForbidden, nil
+	}
+
+	linkURL, err := url.Parse(req.URL)
+	if err != nil || (linkURL.Scheme != "http" && linkURL.Scheme != "https") || linkURL.Host == "" ||
+		!strings.HasSuffix(linkURL.Path, "/share/"+link.Hash) {
+		return http.StatusBadRequest, fmt.Errorf("invalid share link")
+	}
+
+	from, err := validateSMTPConfig(smtpConfig)
+	if err != nil {
+		return http.StatusServiceUnavailable, err
+	}
+
+	message := buildLinkMessage(from, recipient, linkURL.String())
+	if err := deliverEmail(smtpConfig, from, recipient, message); err != nil {
+		return http.StatusBadGateway, fmt.Errorf("failed to send email: %w", err)
+	}
+
+	return http.StatusNoContent, nil
+})
+
+func buildLinkMessage(from, recipient *mail.Address, link string) []byte {
+	var message bytes.Buffer
+	fmt.Fprintf(&message, "From: %s\r\n", from.String())
+	fmt.Fprintf(&message, "To: %s\r\n", recipient.String())
+	fmt.Fprintf(&message, "Subject: %s\r\n", mime.QEncoding.Encode("UTF-8", "File shared with you"))
+	fmt.Fprintf(&message, "Date: %s\r\n", time.Now().Format(time.RFC1123Z))
+	fmt.Fprintf(&message, "MIME-Version: 1.0\r\n")
+	fmt.Fprintf(&message, "Content-Type: text/plain; charset=utf-8\r\n")
+	fmt.Fprintf(&message, "Content-Transfer-Encoding: 8bit\r\n\r\n")
+	fmt.Fprintf(&message, "A link to a file was shared with you using File Browser:\r\n\r\n%s\r\n", link)
+	return message.Bytes()
+}
+
 // zipForEmail builds a zip archive of a directory or of a selection of entries
 // inside a directory, enforcing the attachment size limit.
 func zipForEmail(r *http.Request, d *data, info fs.FileInfo, names []string, maxSize int64, filename *string, content *[]byte) (int, error) {
@@ -175,16 +241,24 @@ func zipForEmail(r *http.Request, d *data, info fs.FileInfo, names []string, max
 	return 0, nil
 }
 
-func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, filename string, content []byte) error {
+func validateSMTPConfig(config settings.SMTPSettings) (*mail.Address, error) {
 	from, err := mail.ParseAddress(config.From)
 	if err != nil {
-		return fmt.Errorf("invalid SMTP sender address: %w", err)
+		return nil, fmt.Errorf("invalid SMTP sender address: %w", err)
 	}
 	if config.Host == "" || config.Port < 1 || config.Port > 65535 {
-		return fmt.Errorf("invalid SMTP server configuration")
+		return nil, fmt.Errorf("invalid SMTP server configuration")
 	}
 	if (config.Username == "") != (config.Password == "") {
-		return fmt.Errorf("SMTP username and password must both be set or both be empty")
+		return nil, fmt.Errorf("SMTP username and password must both be set or both be empty")
+	}
+	return from, nil
+}
+
+func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, filename string, content []byte) error {
+	from, err := validateSMTPConfig(config)
+	if err != nil {
+		return err
 	}
 
 	message, err := buildAttachmentMessage(from, recipient, filename, content)
@@ -192,6 +266,10 @@ func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, 
 		return err
 	}
 
+	return deliverEmail(config, from, recipient, message)
+}
+
+func deliverEmail(config settings.SMTPSettings, from, recipient *mail.Address, message []byte) error {
 	address := net.JoinHostPort(config.Host, strconv.Itoa(config.Port))
 	tlsConfig := &tls.Config{
 		ServerName: config.Host,

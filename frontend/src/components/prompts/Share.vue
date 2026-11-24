@@ -13,6 +13,7 @@
             <th>{{ $t("prompts.shareMaxDownloads") }}</th>
             <th></th>
             <th></th>
+            <th v-if="emailEnabled"></th>
             <th></th>
           </tr>
 
@@ -57,6 +58,16 @@
                 <i class="material-icons">content_paste_go</i>
               </button>
             </td>
+            <td class="small" v-if="emailEnabled">
+              <button
+                class="action"
+                :aria-label="$t('buttons.sendLinkByEmail')"
+                :title="$t('buttons.sendLinkByEmail')"
+                @click="startEmail(link)"
+              >
+                <i class="material-icons">email</i>
+              </button>
+            </td>
             <td class="small">
               <button
                 class="action"
@@ -69,9 +80,9 @@
             </td>
           </tr>
         </table>
-        <div v-if="emailEnabled && selectedFile && !selectedFile.isDir">
-          <h3>{{ $t("prompts.emailAttachment") }}</h3>
-          <p class="small">{{ $t("prompts.emailAttachmentHelp", { max: maxAttachmentMB }) }}</p>
+        <div v-if="emailEnabled && emailLink">
+          <h3>{{ $t("prompts.emailLink") }}</h3>
+          <p class="small">{{ $t("prompts.emailLinkHelp") }}</p>
           <p>
             <label for="email-recipient">{{ $t("prompts.emailRecipient") }}</label>
             <input
@@ -80,6 +91,7 @@
               type="email"
               v-model.trim="emailTo"
               autocomplete="email"
+              @keyup.enter="sendEmail"
             />
           </p>
         </div>
@@ -96,7 +108,7 @@
           {{ $t("buttons.close") }}
         </button>
         <button
-          v-if="emailEnabled && selectedFile && !selectedFile.isDir"
+          v-if="emailEnabled && emailLink"
           class="button button--flat button--grey"
           :disabled="!canSendEmail"
           @click="sendEmail"
@@ -173,21 +185,6 @@
           tabindex="3"
         />
 
-        <div v-if="emailEnabled && selectedFile && !selectedFile.isDir">
-          <h3>{{ $t("prompts.emailAttachment") }}</h3>
-          <p class="small">{{ $t("prompts.emailAttachmentHelp", { max: maxAttachmentMB }) }}</p>
-          <p>
-            <label for="email-recipient">{{ $t("prompts.emailRecipient") }}</label>
-            <input
-              id="email-recipient"
-              class="input input--block"
-              type="email"
-              v-model.trim="emailTo"
-              autocomplete="email"
-            />
-          </p>
-        </div>
-
       </div>
 
       <div class="card-action">
@@ -199,18 +196,6 @@
           tabindex="5"
         >
           {{ $t("buttons.cancel") }}
-        </button>
-        <button
-          v-if="emailEnabled && selectedFile && !selectedFile.isDir"
-          class="button button--flat button--grey"
-          :disabled="!canSendEmail"
-          @click="sendEmail"
-        >
-          {{
-            sendingEmail
-              ? $t("prompts.sendingEmail")
-              : $t("buttons.sendEmail")
-          }}
         </button>
         <button
           id="focus-prompt"
@@ -235,7 +220,6 @@ import dayjs from "dayjs";
 import { useLayoutStore } from "@/stores/layout";
 import { useAuthStore } from "@/stores/auth";
 import { copy } from "@/utils/clipboard";
-import { emailMaxAttachmentMB } from "@/utils/constants";
 import { emailConfigured, refreshEmailStatus } from "@/utils/emailStatus";
 
 export default {
@@ -251,6 +235,7 @@ export default {
       password: "",
       listing: true,
       emailTo: "",
+      emailLink: null,
       sendingEmail: false,
     };
   },
@@ -275,23 +260,14 @@ export default {
 
       return this.req.items[this.selected[0]].url;
     },
-    selectedFile() {
-      if (this.selectedCount !== 1 || !this.req?.items) return null;
-      return this.req.items[this.selected[0]];
-    },
     emailEnabled() {
       return emailConfigured.value;
-    },
-    maxAttachmentMB() {
-      return emailMaxAttachmentMB;
     },
     canSendEmail() {
       return (
         this.emailEnabled &&
         !!this.emailTo &&
-        !!this.selectedFile &&
-        !this.selectedFile.isDir &&
-        this.selectedFile.size <= this.maxAttachmentMB * 1024 * 1024 &&
+        !!this.emailLink &&
         !this.sendingEmail
       );
     },
@@ -358,13 +334,22 @@ export default {
         this.$showError(e);
       }
     },
+    startEmail(link) {
+      this.emailLink = link;
+      this.emailTo = "";
+    },
     sendEmail: async function () {
-      if (!this.canSendEmail || !this.url) return;
+      if (!this.canSendEmail) return;
       this.sendingEmail = true;
       try {
-        await api.email.send(this.url, this.emailTo);
+        await api.email.sendLink(
+          this.emailLink.hash,
+          this.emailTo,
+          this.buildLink(this.emailLink)
+        );
         this.$showSuccess(this.$t("success.emailSent"));
-        this.closeHovers();
+        this.emailLink = null;
+        this.emailTo = "";
       } catch (e) {
         this.$showError(e);
       } finally {

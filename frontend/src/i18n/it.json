@@ -35,6 +35,7 @@
     "select": "Seleziona",
     "selectMultiple": "Seleziona molteplici",
     "share": "Condividi",
+    "sendLinkByEmail": "Invia link via email",
     "sendEmail": "Invia email",
     "shell": "Mostra/nascondi shell",
     "submit": "Invia",
@@ -185,6 +186,8 @@
     "emailAttachment": "Invia come allegato email",
     "emailAttachmentHelp": "Il file selezionato sarà allegato direttamente all'email (massimo {max} MiB).",
     "emailSendHelp": "Gli elementi selezionati saranno inviati come allegato (cartelle e selezioni multiple vengono compresse in un file zip, massimo {max} MiB).",
+    "emailLink": "Invia link via email",
+    "emailLinkHelp": "Il link di condivisione verrà inviato al destinatario via email.",
     "emailRecipient": "Indirizzo email del destinatario",
     "sendingEmail": "Invio in corso..."
   },
