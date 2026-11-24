@@ -17,6 +17,15 @@ const (
 	MosaicViewMode ViewMode = "mosaic"
 )
 
+// SMTP is a personal SMTP configuration that overrides the global one.
+type SMTP struct {
+	Host     string `json:"host"`
+	Port     int    `json:"port"`
+	Username string `json:"username"`
+	Password string `json:"password"`
+	From     string `json:"from"`
+}
+
 // User describes a user.
 type User struct {
 	ID                    uint          `storm:"id,increment" json:"id"`
@@ -36,6 +45,7 @@ type User struct {
 	HideDotfiles          bool          `json:"hideDotfiles"`
 	DateFormat            bool          `json:"dateFormat"`
 	AceEditorTheme        string        `json:"aceEditorTheme"`
+	SMTP                  *SMTP         `json:"smtp,omitempty"`
 }
 
 // GetRules implements rules.Provider.

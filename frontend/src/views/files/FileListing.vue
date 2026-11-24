@@ -19,6 +19,12 @@
             show="share"
           />
           <action
+            v-if="headerButtons.email"
+            icon="email"
+            :label="t('buttons.sendEmail')"
+            show="email"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -96,6 +102,12 @@
         icon="share"
         :label="t('buttons.share')"
         show="share"
+      />
+      <action
+        v-if="headerButtons.email"
+        icon="email"
+        :label="t('buttons.sendEmail')"
+        show="email"
       />
       <action
         v-if="headerButtons.rename"
@@ -269,6 +281,12 @@
             show="share"
           />
           <action
+            v-if="headerButtons.email"
+            icon="email"
+            :label="t('buttons.sendEmail')"
+            show="email"
+          />
+          <action
             v-if="headerButtons.rename"
             icon="mode_edit"
             :label="t('buttons.rename')"
@@ -347,6 +365,7 @@ import { useLayoutStore } from "@/stores/layout";
 
 import { users, files as api } from "@/api";
 import { enableExec } from "@/utils/constants";
+import { emailConfigured, refreshEmailStatus } from "@/utils/emailStatus";
 import * as upload from "@/utils/upload";
 import buttons from "@/utils/buttons";
 import css from "@/utils/css";
@@ -485,6 +504,11 @@ const headerButtons = computed(() => {
       fileStore.selectedCount === 1 &&
       authStore.user?.perm.share &&
       authStore.user?.perm.download,
+    email:
+      emailConfigured.value &&
+      fileStore.selectedCount > 0 &&
+      authStore.user?.perm.share &&
+      authStore.user?.perm.download,
     move: fileStore.selectedCount > 0 && authStore.user?.perm.rename,
     copy: fileStore.selectedCount > 0 && authStore.user?.perm.create,
   };
@@ -512,6 +536,7 @@ watch(req, () => {
 });
 
 onMounted(() => {
+  refreshEmailStatus();
   // Check the columns size for the first time.
   columnsResize();
 

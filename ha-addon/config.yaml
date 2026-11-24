@@ -1,5 +1,5 @@
 name: File Browser
-version: "2.64.8"
+version: "2.64.9"
 slug: filebrowser
 description: File Browser with expiring shares and automatic file deletion
 url: https://github.com/ftufino/filebrowser

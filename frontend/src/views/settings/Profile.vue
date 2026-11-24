@@ -52,6 +52,76 @@
       </form>
     </div>
 
+    <div v-if="authStore.user?.perm.share" class="column">
+      <form class="card" @submit="saveSmtp">
+        <div class="card-title">
+          <h2>{{ t("settings.personalSmtp") }}</h2>
+        </div>
+
+        <div class="card-content">
+          <p class="small">{{ t("settings.personalSmtpHelp") }}</p>
+          <p>
+            <label for="smtp-host">{{ t("settings.smtpHost") }}</label>
+            <input
+              id="smtp-host"
+              class="input input--block"
+              v-model.trim="smtp.host"
+              autocomplete="off"
+            />
+          </p>
+          <p>
+            <label for="smtp-port">{{ t("settings.smtpPort") }}</label>
+            <input
+              id="smtp-port"
+              class="input input--block"
+              type="number"
+              min="1"
+              max="65535"
+              v-model.number="smtp.port"
+            />
+          </p>
+          <p>
+            <label for="smtp-username">{{ t("settings.smtpUsername") }}</label>
+            <input
+              id="smtp-username"
+              class="input input--block"
+              v-model.trim="smtp.username"
+              autocomplete="off"
+            />
+          </p>
+          <p>
+            <label for="smtp-password">{{ t("settings.smtpPassword") }}</label>
+            <input
+              id="smtp-password"
+              class="input input--block"
+              type="password"
+              v-model="smtp.password"
+              autocomplete="new-password"
+              :placeholder="smtp.hasPassword ? '••••••••' : ''"
+            />
+          </p>
+          <p>
+            <label for="smtp-from">{{ t("settings.smtpFrom") }}</label>
+            <input
+              id="smtp-from"
+              class="input input--block"
+              type="email"
+              v-model.trim="smtp.from"
+            />
+          </p>
+        </div>
+
+        <div class="card-action">
+          <input
+            class="button button--flat"
+            type="submit"
+            name="submitSmtp"
+            :value="t('buttons.update')"
+          />
+        </div>
+      </form>
+    </div>
+
     <div v-if="!noAuth" class="column">
       <form
         class="card"
@@ -104,7 +174,8 @@
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
 import { useLayoutStore } from "@/stores/layout";
-import { users as api } from "@/api";
+import { users as api, email as emailApi } from "@/api";
+import { refreshEmailStatus } from "@/utils/emailStatus";
 import AceEditorTheme from "@/components/settings/AceEditorTheme.vue";
 import Languages from "@/components/settings/Languages.vue";
 import { computed, inject, onMounted, ref } from "vue";
@@ -128,6 +199,15 @@ const redirectAfterCopyMove = ref<boolean>(false);
 const dateFormat = ref<boolean>(false);
 const locale = ref<string>("");
 const aceEditorTheme = ref<string>("");
+
+const smtp = ref<{
+  host: string;
+  port: number;
+  username: string;
+  password: string;
+  from: string;
+  hasPassword: boolean;
+}>({ host: "", port: 587, username: "", password: "", from: "", hasPassword: false });
 
 const passwordClass = computed(() => {
   const baseClass = "input input--block";
@@ -155,8 +235,44 @@ onMounted(async () => {
   layoutStore.loading = false;
   isCurrentPasswordRequired.value = authMethod == "json";
 
+  try {
+    const status = await emailApi.getSmtp();
+    if (status.personal) {
+      smtp.value = {
+        host: status.personal.host,
+        port: status.personal.port,
+        username: status.personal.username,
+        password: "",
+        from: status.personal.from,
+        hasPassword: !!status.personal.hasPassword,
+      };
+    }
+  } catch (e: any) {
+    $showError(e);
+  }
+
   return true;
 });
+
+const saveSmtp = async (event: Event) => {
+  event.preventDefault();
+
+  try {
+    await emailApi.saveSmtp({
+      host: smtp.value.host,
+      port: smtp.value.port || 587,
+      username: smtp.value.username,
+      password: smtp.value.password,
+      from: smtp.value.from,
+    });
+    smtp.value.password = "";
+    smtp.value.hasPassword = !!smtp.value.host && !!smtp.value.username;
+    await refreshEmailStatus();
+    $showSuccess(t("settings.settingsUpdated"));
+  } catch (e: any) {
+    $showError(e);
+  }
+};
 
 const updatePassword = async (event: Event) => {
   event.preventDefault();

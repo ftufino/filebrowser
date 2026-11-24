@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-version) for commit guidelines.
 
-## [2.64.0](https://github.com/ftufino/filebrowser/compare/v2.63.23...v2.64.0) (2026-11-24)
+## [2.64.9](https://github.com/ftufino/filebrowser/compare/v2.63.23...v2.64.9) (2026-11-24)
 
 ### Features
 
@@ -11,6 +11,8 @@ All notable changes to this project will be documented in this file. See [commit
 * shares: expired shares are now purged in background every minute
 * email: send a shared file as attachment from the Share prompt (also available from the share list when SMTP is configured)
 * home assistant: add-on (`ha-addon`, `repository.yaml`) with configurable `base_url` for use behind a reverse proxy (internal port fixed to 8080)
+* email: each user can set a personal SMTP server (Settings → Profile) that overrides the global one; email actions are hidden when no SMTP is available
+* email: new "Send email" action for one or more selected files and folders; folders and multiple selections are sent as a zip attachment
 * email: configurable maximum attachment size (`SMTP.MaxAttachmentMB`, default 25 MiB) in the global settings
 * publish container images to GitHub Container Registry (`ghcr.io/ftufino/filebrowser`)
 * ci: manual trigger of the release workflow with a tag input

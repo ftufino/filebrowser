@@ -186,6 +186,7 @@
     "currentPasswordMessage": "Enter your password to validate this action.",
     "emailAttachment": "Send as an email attachment",
     "emailAttachmentHelp": "The selected file will be attached directly to the email (maximum {max} MiB).",
+    "emailSendHelp": "The selected items will be sent as an attachment (folders and multiple selections are compressed into a zip file, maximum {max} MiB).",
     "emailRecipient": "Recipient email address",
     "sendingEmail": "Sending..."
   },
@@ -275,6 +276,8 @@
     "smtpUsername": "SMTP username (optional)",
     "smtpPassword": "SMTP password (optional)",
     "smtpPasswordSaved": "A password is saved; leave blank to keep it",
+    "personalSmtp": "Personal SMTP server",
+    "personalSmtpHelp": "Overrides the server SMTP settings for your emails. Leave the host empty to use the server SMTP, if configured.",
     "smtpMaxAttachment": "Maximum attachment size (MiB)",
     "smtpFrom": "Sender email address",
     "shareDuration": "Share Duration",

@@ -23,6 +23,7 @@ import Copy from "./Copy.vue";
 import NewFile from "./NewFile.vue";
 import NewDir from "./NewDir.vue";
 import Replace from "./Replace.vue";
+import Email from "./Email.vue";
 import Share from "./Share.vue";
 import ShareDelete from "./ShareDelete.vue";
 import Upload from "./Upload.vue";
@@ -46,6 +47,7 @@ const components = new Map<string, any>([
   ["download", Download],
   ["replace", Replace],
   ["share", Share],
+  ["email", Email],
   ["upload", Upload],
   ["share-delete", ShareDelete],
   ["deleteUser", DeleteUser],

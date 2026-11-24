@@ -184,6 +184,7 @@
     "currentPasswordMessage": "Enter your password to validate this action.",
     "emailAttachment": "Invia come allegato email",
     "emailAttachmentHelp": "Il file selezionato sarà allegato direttamente all'email (massimo {max} MiB).",
+    "emailSendHelp": "Gli elementi selezionati saranno inviati come allegato (cartelle e selezioni multiple vengono compresse in un file zip, massimo {max} MiB).",
     "emailRecipient": "Indirizzo email del destinatario",
     "sendingEmail": "Invio in corso..."
   },
@@ -273,6 +274,8 @@
     "smtpUsername": "Nome utente SMTP (opzionale)",
     "smtpPassword": "Password SMTP (opzionale)",
     "smtpPasswordSaved": "Password salvata; lascia vuoto per mantenerla",
+    "personalSmtp": "Server SMTP personale",
+    "personalSmtpHelp": "Sostituisce l'SMTP del server per le tue email. Lascia l'host vuoto per usare l'SMTP del server, se configurato.",
     "smtpMaxAttachment": "Dimensione massima allegato (MiB)",
     "smtpFrom": "Indirizzo email del mittente",
     "shareDuration": "Durata della condivisione",

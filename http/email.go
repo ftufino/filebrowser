@@ -5,8 +5,10 @@ import (
 	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"mime"
 	"mime/multipart"
 	"net"
@@ -19,15 +21,33 @@ import (
 	"strings"
 	"time"
 
+	"github.com/mholt/archives"
+
 	"github.com/filebrowser/filebrowser/v2/settings"
 )
 
 const (
-	maxEmailRequestSize = 4 << 10
+	maxEmailRequestSize = 64 << 10
 )
 
 type emailRequest struct {
-	To string `json:"to"`
+	To    string   `json:"to"`
+	Files []string `json:"files"`
+}
+
+// errAttachmentTooLarge is returned when the attachment exceeds the configured limit.
+var errAttachmentTooLarge = errors.New("attachment too large")
+
+type limitedBuffer struct {
+	buf bytes.Buffer
+	max int64
+}
+
+func (l *limitedBuffer) Write(p []byte) (int, error) {
+	if int64(l.buf.Len()+len(p)) > l.max {
+		return 0, errAttachmentTooLarge
+	}
+	return l.buf.Write(p)
 }
 
 var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request, d *data) (int, error) {
@@ -35,7 +55,8 @@ var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request
 		return http.StatusForbidden, nil
 	}
 
-	if d.settings.SMTP.Host == "" || d.settings.SMTP.From == "" {
+	smtpConfig, ok := effectiveSMTP(d.settings.SMTP, d.user.SMTP)
+	if !ok {
 		return http.StatusServiceUnavailable, fmt.Errorf("email sharing is not configured")
 	}
 
@@ -65,33 +86,94 @@ var emailPostHandler = withPermShare(func(_ http.ResponseWriter, r *http.Request
 	if err != nil {
 		return errToStatus(err), err
 	}
-	if !info.Mode().IsRegular() {
-		return http.StatusBadRequest, fmt.Errorf("only regular files can be emailed")
-	}
-	if info.Size() > maxSize {
-		return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
+
+	var filename string
+	var content []byte
+	if len(req.Files) == 0 && info.Mode().IsRegular() {
+		if info.Size() > maxSize {
+			return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
+		}
+		file, err := d.user.Fs.Open(r.URL.Path)
+		if err != nil {
+			return errToStatus(err), err
+		}
+		defer file.Close()
+
+		content, err = io.ReadAll(io.LimitReader(file, maxSize+1))
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		if int64(len(content)) > maxSize {
+			return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
+		}
+		filename = filepath.Base(r.URL.Path)
+	} else {
+		status, err := zipForEmail(r, d, info, req.Files, maxSize, &filename, &content)
+		if err != nil {
+			return status, err
+		}
 	}
 
-	file, err := d.user.Fs.Open(r.URL.Path)
-	if err != nil {
-		return errToStatus(err), err
-	}
-	defer file.Close()
-
-	content, err := io.ReadAll(io.LimitReader(file, maxSize+1))
-	if err != nil {
-		return http.StatusInternalServerError, err
-	}
-	if int64(len(content)) > maxSize {
-		return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
-	}
-
-	if err := sendEmailAttachment(d.settings.SMTP, recipient, filepath.Base(r.URL.Path), content); err != nil {
+	if err := sendEmailAttachment(smtpConfig, recipient, filename, content); err != nil {
 		return http.StatusBadGateway, fmt.Errorf("failed to send email: %w", err)
 	}
 
 	return http.StatusNoContent, nil
 })
+
+// zipForEmail builds a zip archive of a directory or of a selection of entries
+// inside a directory, enforcing the attachment size limit.
+func zipForEmail(r *http.Request, d *data, info fs.FileInfo, names []string, maxSize int64, filename *string, content *[]byte) (int, error) {
+	base := filepath.Clean(r.URL.Path)
+	var targets []string
+	var commonDir string
+	if len(names) > 0 {
+		if !info.IsDir() {
+			return http.StatusBadRequest, fmt.Errorf("a file list requires a directory path")
+		}
+		commonDir = base
+		for _, name := range names {
+			targets = append(targets, filepath.Join(base, slashClean(name)))
+		}
+		*filename = filepath.Base(base)
+		if *filename == "." || *filename == string(filepath.Separator) || *filename == "" {
+			*filename = "files"
+		}
+		if len(names) == 1 {
+			*filename = filepath.Base(names[0])
+		}
+	} else {
+		commonDir = filepath.Dir(base)
+		targets = []string{base}
+		*filename = filepath.Base(base)
+	}
+	*filename += ".zip"
+
+	var archiveFiles []archives.FileInfo
+	for _, target := range targets {
+		if !d.Check(target) {
+			return http.StatusForbidden, nil
+		}
+		found, err := getFiles(d, target, commonDir)
+		if err != nil {
+			return errToStatus(err), err
+		}
+		archiveFiles = append(archiveFiles, found...)
+	}
+	if len(archiveFiles) == 0 {
+		return http.StatusBadRequest, fmt.Errorf("nothing to send")
+	}
+
+	out := &limitedBuffer{max: maxSize}
+	if err := (archives.Zip{}).Archive(r.Context(), out, archiveFiles); err != nil {
+		if errors.Is(err, errAttachmentTooLarge) {
+			return http.StatusRequestEntityTooLarge, fmt.Errorf("attachment exceeds the %d MiB limit", maxSize>>20)
+		}
+		return http.StatusInternalServerError, err
+	}
+	*content = out.buf.Bytes()
+	return 0, nil
+}
 
 func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, filename string, content []byte) error {
 	from, err := mail.ParseAddress(config.From)

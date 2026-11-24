@@ -78,6 +78,7 @@ var usersGetHandler = withAdmin(func(w http.ResponseWriter, r *http.Request, d *
 
 	for _, u := range users {
 		u.Password = ""
+		u.SMTP = nil
 	}
 
 	sort.Slice(users, func(i, j int) bool {
@@ -98,6 +99,7 @@ var userGetHandler = withSelfOrAdmin(func(w http.ResponseWriter, r *http.Request
 	}
 
 	u.Password = ""
+	u.SMTP = nil
 	if !d.user.Perm.Admin {
 		u.Scope = ""
 	}
@@ -150,6 +152,7 @@ var userPostHandler = withAdmin(func(w http.ResponseWriter, r *http.Request, d *
 	if req.Data.Password == "" {
 		return http.StatusBadRequest, fberrors.ErrEmptyPassword
 	}
+	req.Data.SMTP = nil
 
 	req.Data.Password, err = users.ValidateAndHashPwd(req.Data.Password, d.settings.MinimumPasswordLength)
 	if err != nil {
@@ -221,17 +224,19 @@ var userPutHandler = withSelfOrAdmin(func(w http.ResponseWriter, r *http.Request
 			return http.StatusForbidden, nil
 		}
 
+		suser, err := d.store.Users.Get(d.server.Root, d.server.FollowExternalSymlinks, d.raw.(uint))
+		if err != nil {
+			return http.StatusInternalServerError, err
+		}
+		// The personal SMTP settings are managed only by their owner.
+		req.Data.SMTP = suser.SMTP
+
 		if req.Data.Password != "" {
 			req.Data.Password, err = users.ValidateAndHashPwd(req.Data.Password, d.settings.MinimumPasswordLength)
 			if err != nil {
 				return http.StatusBadRequest, err
 			}
 		} else {
-			var suser *users.User
-			suser, err = d.store.Users.Get(d.server.Root, d.server.FollowExternalSymlinks, d.raw.(uint))
-			if err != nil {
-				return http.StatusInternalServerError, err
-			}
 			req.Data.Password = suser.Password
 		}
 
@@ -241,6 +246,10 @@ var userPutHandler = withSelfOrAdmin(func(w http.ResponseWriter, r *http.Request
 	for k, v := range req.Which {
 		v = cases.Title(language.English, cases.NoLower).String(v)
 		req.Which[k] = v
+
+		if strings.EqualFold(v, "SMTP") {
+			return http.StatusForbidden, nil
+		}
 
 		if v == "Password" {
 			if !d.user.Perm.Admin && d.user.LockPassword {

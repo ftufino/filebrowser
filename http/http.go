@@ -90,6 +90,8 @@ func NewHandler(
 	api.PathPrefix("/share").Handler(monkey(shareGetsHandler, "/api/share")).Methods("GET")
 	api.PathPrefix("/share").Handler(monkey(sharePostHandler, "/api/share")).Methods("POST")
 	api.PathPrefix("/share").Handler(monkey(shareDeleteHandler, "/api/share")).Methods("DELETE")
+	api.Path("/smtp").Handler(monkey(smtpGetHandler, "/api/smtp")).Methods("GET")
+	api.Path("/smtp").Handler(monkey(smtpPutHandler, "/api/smtp")).Methods("PUT")
 	api.PathPrefix("/email").Handler(monkey(emailPostHandler, "/api/email")).Methods("POST")
 
 	api.Handle("/settings", monkey(settingsGetHandler, "")).Methods("GET")

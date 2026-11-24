@@ -69,7 +69,7 @@
             </td>
           </tr>
         </table>
-        <div v-if="selectedFile && !selectedFile.isDir">
+        <div v-if="emailEnabled && selectedFile && !selectedFile.isDir">
           <h3>{{ $t("prompts.emailAttachment") }}</h3>
           <p class="small">{{ $t("prompts.emailAttachmentHelp", { max: maxAttachmentMB }) }}</p>
           <p>
@@ -96,7 +96,7 @@
           {{ $t("buttons.close") }}
         </button>
         <button
-          v-if="selectedFile && !selectedFile.isDir"
+          v-if="emailEnabled && selectedFile && !selectedFile.isDir"
           class="button button--flat button--grey"
           :disabled="!canSendEmail"
           @click="sendEmail"
@@ -173,7 +173,7 @@
           tabindex="3"
         />
 
-        <div v-if="selectedFile && !selectedFile.isDir">
+        <div v-if="emailEnabled && selectedFile && !selectedFile.isDir">
           <h3>{{ $t("prompts.emailAttachment") }}</h3>
           <p class="small">{{ $t("prompts.emailAttachmentHelp", { max: maxAttachmentMB }) }}</p>
           <p>
@@ -201,7 +201,7 @@
           {{ $t("buttons.cancel") }}
         </button>
         <button
-          v-if="selectedFile && !selectedFile.isDir"
+          v-if="emailEnabled && selectedFile && !selectedFile.isDir"
           class="button button--flat button--grey"
           :disabled="!canSendEmail"
           @click="sendEmail"
@@ -236,6 +236,7 @@ import { useLayoutStore } from "@/stores/layout";
 import { useAuthStore } from "@/stores/auth";
 import { copy } from "@/utils/clipboard";
 import { emailMaxAttachmentMB } from "@/utils/constants";
+import { emailConfigured, refreshEmailStatus } from "@/utils/emailStatus";
 
 export default {
   name: "share",
@@ -278,11 +279,15 @@ export default {
       if (this.selectedCount !== 1 || !this.req?.items) return null;
       return this.req.items[this.selected[0]];
     },
+    emailEnabled() {
+      return emailConfigured.value;
+    },
     maxAttachmentMB() {
       return emailMaxAttachmentMB;
     },
     canSendEmail() {
       return (
+        this.emailEnabled &&
         !!this.emailTo &&
         !!this.selectedFile &&
         !this.selectedFile.isDir &&
@@ -292,6 +297,7 @@ export default {
     },
   },
   async beforeMount() {
+    refreshEmailStatus();
     try {
       const links = await api.share.get(this.url);
       this.links = links;

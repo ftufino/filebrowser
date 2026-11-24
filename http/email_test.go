@@ -105,7 +105,8 @@ func TestEmailHandlerRejectsDirectoriesAndOversizedFiles(t *testing.T) {
 		path string
 		want int
 	}{
-		{name: "directory", path: "/folder/", want: http.StatusBadRequest},
+		// directories are zipped, so the request reaches the (unreachable) SMTP server
+		{name: "directory is zipped", path: "/folder/", want: http.StatusBadGateway},
 		{name: "oversized file", path: "/large.bin", want: http.StatusRequestEntityTooLarge},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
