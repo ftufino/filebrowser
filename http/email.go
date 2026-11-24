@@ -141,15 +141,13 @@ func sendEmailAttachment(config settings.SMTPSettings, recipient *mail.Address, 
 	}
 	defer client.Close()
 
-	if implicitTLS {
-		// already encrypted
-	} else if ok, _ := client.Extension("STARTTLS"); !ok {
-		return fmt.Errorf("SMTP server does not support required STARTTLS")
-	} else if err := client.StartTLS(&tls.Config{
-		ServerName: config.Host,
-		MinVersion: tls.VersionTLS12,
-	}); err != nil {
-		return fmt.Errorf("start SMTP TLS: %w", err)
+	if !implicitTLS {
+		if ok, _ := client.Extension("STARTTLS"); !ok {
+			return fmt.Errorf("SMTP server does not support required STARTTLS")
+		}
+		if err := client.StartTLS(tlsConfig); err != nil {
+			return fmt.Errorf("start SMTP TLS: %w", err)
+		}
 	}
 	if config.Username != "" {
 		auth := smtp.PlainAuth("", config.Username, config.Password, config.Host)
