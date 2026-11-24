@@ -1,7 +1,3 @@
-> [!WARNING]
-> 
-> **File Browser is archived on 2026-09-01**. The last planned release has already shipped. There will be no further releases, bug fixes, or security fixes.   
-
 <p align="center">
   <img src="./branding/banner.png" width="550"/>
 </p>

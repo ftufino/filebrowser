@@ -69,6 +69,20 @@
             </td>
           </tr>
         </table>
+        <div v-if="selectedFile && !selectedFile.isDir">
+          <h3>{{ $t("prompts.emailAttachment") }}</h3>
+          <p class="small">{{ $t("prompts.emailAttachmentHelp") }}</p>
+          <p>
+            <label for="email-recipient">{{ $t("prompts.emailRecipient") }}</label>
+            <input
+              id="email-recipient"
+              class="input input--block"
+              type="email"
+              v-model.trim="emailTo"
+              autocomplete="email"
+            />
+          </p>
+        </div>
       </div>
 
       <div class="card-action">
@@ -80,6 +94,18 @@
           tabindex="2"
         >
           {{ $t("buttons.close") }}
+        </button>
+        <button
+          v-if="selectedFile && !selectedFile.isDir"
+          class="button button--flat button--grey"
+          :disabled="!canSendEmail"
+          @click="sendEmail"
+        >
+          {{
+            sendingEmail
+              ? $t("prompts.sendingEmail")
+              : $t("buttons.sendEmail")
+          }}
         </button>
         <button
           id="focus-prompt"
@@ -161,6 +187,7 @@
             />
           </p>
         </div>
+
       </div>
 
       <div class="card-action">
