@@ -3,11 +3,13 @@ package fbhttp
 import (
 	"crypto/subtle"
 	"errors"
+	"log"
 	"net/http"
 	"net/url"
 	"path"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/filebrowser/filebrowser/v2/files"
 	"github.com/filebrowser/filebrowser/v2/share"
@@ -128,13 +130,79 @@ var publicShareHandler = withHashFile(func(w http.ResponseWriter, r *http.Reques
 	return renderJSON(w, r, file)
 })
 
-var publicDlHandler = withHashFile(func(w http.ResponseWriter, r *http.Request, d *data) (int, error) {
-	file := d.raw.(*files.FileInfo)
-	if !file.IsDir {
-		return rawFileHandler(w, r, file)
+var shareDownloadMu sync.Mutex
+
+// reserveShareDownload counts a download on links with a download limit. It
+// returns the updated link, or nil when the link has no limit.
+func reserveShareDownload(d *data, hash string) (*share.Link, error) {
+	shareDownloadMu.Lock()
+	defer shareDownloadMu.Unlock()
+
+	link, err := d.store.Share.GetByHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	if link.MaxDownloads == 0 {
+		return nil, nil
 	}
 
-	return rawDirHandler(w, r, d, file)
+	link.Downloads++
+	if err := d.store.Share.Save(link); err != nil {
+		return nil, err
+	}
+	return link, nil
+}
+
+func releaseShareDownload(d *data, hash string) {
+	shareDownloadMu.Lock()
+	defer shareDownloadMu.Unlock()
+
+	if link, err := d.store.Share.GetByHash(hash); err == nil && link.Downloads > 0 {
+		link.Downloads--
+		_ = d.store.Share.Save(link)
+	}
+}
+
+var publicDlHandler = withHashFile(func(w http.ResponseWriter, r *http.Request, d *data) (int, error) {
+	file := d.raw.(*files.FileInfo)
+
+	var counted *share.Link
+	if r.Method != http.MethodHead {
+		hash, _ := ifPathWithName(r)
+		var err error
+		counted, err = reserveShareDownload(d, hash)
+		if err != nil {
+			return errToStatus(err), err
+		}
+	}
+
+	var (
+		status int
+		err    error
+	)
+	if !file.IsDir {
+		status, err = rawFileHandler(w, r, file)
+	} else {
+		status, err = rawDirHandler(w, r, d, file)
+	}
+
+	if counted == nil {
+		return status, err
+	}
+
+	if err != nil || status >= http.StatusBadRequest {
+		releaseShareDownload(d, counted.Hash)
+		return status, err
+	}
+
+	if counted.Exhausted() {
+		if derr := d.store.Share.Delete(counted.Hash); derr != nil {
+			log.Printf("WARNING: share %s: cannot delete exhausted share: %v", counted.Hash, derr)
+		}
+		deleteSharedFiles(d.store, d.server, counted)
+	}
+
+	return status, err
 })
 
 func authenticateShareRequest(r *http.Request, l *share.Link) (int, error) {

@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"net/http"
 	"path/filepath"
 	"sort"
@@ -14,7 +15,9 @@ import (
 	"time"
 
 	fberrors "github.com/filebrowser/filebrowser/v2/errors"
+	"github.com/filebrowser/filebrowser/v2/settings"
 	"github.com/filebrowser/filebrowser/v2/share"
+	"github.com/filebrowser/filebrowser/v2/storage"
 	"github.com/filebrowser/filebrowser/v2/users"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -29,6 +32,10 @@ type shareResponse struct {
 	UserID      uint   `json:"userID"`
 	Expire      int64  `json:"expire"`
 	HasPassword bool   `json:"hasPassword"`
+
+	DeleteFiles  bool `json:"deleteFiles"`
+	MaxDownloads int  `json:"maxDownloads"`
+	Downloads    int  `json:"downloads"`
 }
 
 func toShareResponse(l *share.Link) *shareResponse {
@@ -38,6 +45,10 @@ func toShareResponse(l *share.Link) *shareResponse {
 		UserID:      l.UserID,
 		Expire:      l.Expire,
 		HasPassword: l.PasswordHash != "",
+
+		DeleteFiles:  l.DeleteFiles,
+		MaxDownloads: l.MaxDownloads,
+		Downloads:    l.Downloads,
 	}
 }
 
@@ -176,6 +187,22 @@ var sharePostHandler = withPermShare(func(w http.ResponseWriter, r *http.Request
 		defer r.Body.Close()
 	}
 
+	if body.MaxDownloads < 0 {
+		return http.StatusBadRequest, errors.New("maxDownloads must not be negative")
+	}
+
+	if body.DeleteFiles {
+		if !d.user.Perm.Delete {
+			return http.StatusForbidden, nil
+		}
+		if r.URL.Path == "/" || r.URL.Path == "" {
+			return http.StatusBadRequest, errors.New("the root cannot be deleted")
+		}
+		if body.Expires == "" && body.MaxDownloads == 0 {
+			return http.StatusBadRequest, errors.New("deleteFiles requires an expiration or a download limit")
+		}
+	}
+
 	bytes := make([]byte, 6)
 	_, err := rand.Read(bytes)
 	if err != nil {
@@ -228,6 +255,8 @@ var sharePostHandler = withPermShare(func(w http.ResponseWriter, r *http.Request
 		UserID:       d.user.ID,
 		PasswordHash: string(hash),
 		Token:        token,
+		DeleteFiles:  body.DeleteFiles,
+		MaxDownloads: body.MaxDownloads,
 	}
 
 	if err := d.store.Share.Save(s); err != nil {
@@ -248,4 +277,31 @@ func getSharePasswordHash(body share.CreateBody) (data []byte, statuscode int, e
 	}
 
 	return hash, 0, nil
+}
+
+// deleteSharedFiles physically removes the path of a finished share. It is
+// best-effort: failures are logged.
+func deleteSharedFiles(store *storage.Storage, server *settings.Server, link *share.Link) {
+	if !link.DeleteFiles || slashClean(link.Path) == "/" {
+		return
+	}
+
+	user, err := store.Users.Get(server.Root, server.FollowExternalSymlinks, link.UserID)
+	if err != nil {
+		log.Printf("WARNING: share %s: cannot load owner to delete files: %v", link.Hash, err)
+		return
+	}
+
+	if !user.Perm.Delete {
+		log.Printf("WARNING: share %s: owner lost delete permission, files kept", link.Hash)
+		return
+	}
+
+	if err := store.Share.DeleteWithPathPrefix(link.Path, link.UserID); err != nil {
+		log.Printf("WARNING: share %s: cannot delete associated shares: %v", link.Hash, err)
+	}
+
+	if err := user.Fs.RemoveAll(link.Path); err != nil {
+		log.Printf("WARNING: share %s: cannot delete files: %v", link.Hash, err)
+	}
 }

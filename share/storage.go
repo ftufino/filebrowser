@@ -21,6 +21,9 @@ type StorageBackend interface {
 // Storage is a storage.
 type Storage struct {
 	back StorageBackend
+	// OnExpire, if set, is called after an expired link flagged with
+	// DeleteFiles has been removed, so that the shared files can be deleted.
+	OnExpire func(*Link)
 }
 
 // NewStorage creates a share links storage from a backend.
@@ -36,16 +39,7 @@ func (s *Storage) All() ([]*Link, error) {
 		return nil, err
 	}
 
-	for i, link := range links {
-		if link.Expire != 0 && link.Expire <= time.Now().Unix() {
-			if err := s.Delete(link.Hash); err != nil {
-				return nil, err
-			}
-			links = append(links[:i], links[i+1:]...)
-		}
-	}
-
-	return links, nil
+	return s.purgeExpired(links)
 }
 
 // FindByUserID wraps a StorageBackend.FindByUserID.
@@ -56,16 +50,7 @@ func (s *Storage) FindByUserID(id uint) ([]*Link, error) {
 		return nil, err
 	}
 
-	for i, link := range links {
-		if link.Expire != 0 && link.Expire <= time.Now().Unix() {
-			if err := s.Delete(link.Hash); err != nil {
-				return nil, err
-			}
-			links = append(links[:i], links[i+1:]...)
-		}
-	}
-
-	return links, nil
+	return s.purgeExpired(links)
 }
 
 // GetByHash wraps a StorageBackend.GetByHash.
@@ -76,9 +61,14 @@ func (s *Storage) GetByHash(hash string) (*Link, error) {
 	}
 
 	if link.Expire != 0 && link.Expire <= time.Now().Unix() {
-		if err := s.Delete(link.Hash); err != nil {
+		if err := s.expire(link); err != nil {
 			return nil, err
 		}
+		return nil, fberrors.ErrNotExist
+	}
+
+	// Exhausted links are finalized by the download handler.
+	if link.Exhausted() {
 		return nil, fberrors.ErrNotExist
 	}
 
@@ -98,16 +88,7 @@ func (s *Storage) Gets(path string, id uint) ([]*Link, error) {
 		return nil, err
 	}
 
-	for i, link := range links {
-		if link.Expire != 0 && link.Expire <= time.Now().Unix() {
-			if err := s.Delete(link.Hash); err != nil {
-				return nil, err
-			}
-			links = append(links[:i], links[i+1:]...)
-		}
-	}
-
-	return links, nil
+	return s.purgeExpired(links)
 }
 
 // Save wraps a StorageBackend.Save
@@ -122,4 +103,29 @@ func (s *Storage) Delete(hash string) error {
 
 func (s *Storage) DeleteWithPathPrefix(path string, userID uint) error {
 	return s.back.DeleteWithPathPrefix(path, userID)
+}
+
+func (s *Storage) expire(link *Link) error {
+	if err := s.back.Delete(link.Hash); err != nil {
+		return err
+	}
+	if link.DeleteFiles && s.OnExpire != nil {
+		s.OnExpire(link)
+	}
+	return nil
+}
+
+func (s *Storage) purgeExpired(links []*Link) ([]*Link, error) {
+	now := time.Now().Unix()
+	valid := make([]*Link, 0, len(links))
+	for _, link := range links {
+		if link.Expire != 0 && link.Expire <= now {
+			if err := s.expire(link); err != nil {
+				return nil, err
+			}
+			continue
+		}
+		valid = append(valid, link)
+	}
+	return valid, nil
 }

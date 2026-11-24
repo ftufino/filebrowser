@@ -26,6 +26,9 @@ interface Share {
   expire?: any;
   userID?: number;
   hasPassword?: boolean;
+  deleteFiles?: boolean;
+  maxDownloads?: number;
+  downloads?: number;
   username?: string;
 }
 

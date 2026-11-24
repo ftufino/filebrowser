@@ -19,7 +19,9 @@ export async function create(
   url: string,
   password = "",
   expires = "",
-  unit = "hours"
+  unit = "hours",
+  deleteFiles = false,
+  maxDownloads = 0
 ) {
   url = removePrefix(url);
   url = `/api/share${url}`;
@@ -27,11 +29,19 @@ export async function create(
     url += `?expires=${expires}&unit=${unit}`;
   }
   let body = "{}";
-  if (password != "" || expires !== "" || unit !== "hours") {
+  if (
+    password != "" ||
+    expires !== "" ||
+    unit !== "hours" ||
+    deleteFiles ||
+    maxDownloads > 0
+  ) {
     body = JSON.stringify({
       password: password,
       expires: expires.toString(), // backend expects string not number
       unit: unit,
+      deleteFiles: deleteFiles,
+      maxDownloads: maxDownloads,
     });
   }
   return fetchJSON(url, {

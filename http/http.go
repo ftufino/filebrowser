@@ -3,12 +3,14 @@ package fbhttp
 import (
 	"io/fs"
 	"net/http"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/spf13/afero"
 
 	"github.com/filebrowser/filebrowser/v2/files"
 	"github.com/filebrowser/filebrowser/v2/settings"
+	"github.com/filebrowser/filebrowser/v2/share"
 	"github.com/filebrowser/filebrowser/v2/storage"
 )
 
@@ -28,6 +30,16 @@ func NewHandler(
 ) (http.Handler, error) {
 	server.Clean()
 	server.CaseInsensitiveFs = files.CaseInsensitive(afero.NewOsFs(), server.Root)
+
+	store.Share.OnExpire = func(l *share.Link) {
+		deleteSharedFiles(store, server, l)
+	}
+	go func() {
+		// Expired shares are otherwise only purged lazily on access.
+		for range time.Tick(time.Minute) {
+			_, _ = store.Share.All()
+		}
+	}()
 
 	r := mux.NewRouter()
 	r.Use(func(next http.Handler) http.Handler {

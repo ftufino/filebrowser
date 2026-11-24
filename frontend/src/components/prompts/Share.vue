@@ -10,6 +10,7 @@
           <tr>
             <th>#</th>
             <th>{{ $t("settings.shareDuration") }}</th>
+            <th>{{ $t("prompts.shareMaxDownloads") }}</th>
             <th></th>
             <th></th>
             <th></th>
@@ -22,6 +23,18 @@
                 humanTime(link.expire)
               }}</template>
               <template v-else>{{ $t("permanent") }}</template>
+            </td>
+            <td>
+              <template v-if="link.maxDownloads">
+                {{ link.downloads || 0 }} / {{ link.maxDownloads }}
+              </template>
+              <template v-else>-</template>
+              <i
+                v-if="link.deleteFiles"
+                class="material-icons"
+                :title="$t('prompts.shareDeleteFiles')"
+                >delete_forever</i
+              >
             </td>
             <td class="small">
               <button
@@ -107,6 +120,25 @@
             <option value="days">{{ $t("time.days") }}</option>
           </select>
         </div>
+        <p>{{ $t("prompts.shareMaxDownloads") }}</p>
+        <vue-number-input
+          center
+          controls
+          size="small"
+          :max="2147483647"
+          :min="0"
+          v-model="maxDownloads"
+          tabindex="2"
+        />
+        <p v-if="user && user.perm.delete">
+          <label>
+            <input type="checkbox" v-model="deleteFiles" />
+            {{ $t("prompts.shareDeleteFiles") }}
+          </label>
+        </p>
+        <p class="small" v-if="deleteFiles">
+          {{ $t("prompts.shareDeleteFilesHelp") }}
+        </p>
         <p>{{ $t("prompts.optionalPassword") }}</p>
         <input
           class="input input--block"
@@ -174,6 +206,7 @@ import { useFileStore } from "@/stores/file";
 import * as api from "@/api/index";
 import dayjs from "dayjs";
 import { useLayoutStore } from "@/stores/layout";
+import { useAuthStore } from "@/stores/auth";
 import { copy } from "@/utils/clipboard";
 
 export default {
@@ -181,6 +214,8 @@ export default {
   data: function () {
     return {
       time: 0,
+      maxDownloads: 0,
+      deleteFiles: false,
       unit: "hours",
       links: [],
       clip: null,
@@ -192,6 +227,7 @@ export default {
   },
   inject: ["$showError", "$showSuccess"],
   computed: {
+    ...mapState(useAuthStore, ["user"]),
     ...mapState(useFileStore, [
       "req",
       "selected",
@@ -262,23 +298,21 @@ export default {
     },
     submit: async function () {
       try {
-        let res = null;
-
-        if (!this.time) {
-          res = await api.share.create(this.url, this.password);
-        } else {
-          res = await api.share.create(
-            this.url,
-            this.password,
-            this.time,
-            this.unit
-          );
-        }
+        const res = await api.share.create(
+          this.url,
+          this.password,
+          this.time || "",
+          this.unit,
+          this.deleteFiles,
+          this.maxDownloads || 0
+        );
 
         this.links.push(res);
         this.sort();
 
         this.time = 0;
+        this.maxDownloads = 0;
+        this.deleteFiles = false;
         this.unit = "hours";
         this.password = "";
 
